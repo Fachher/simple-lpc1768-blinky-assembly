@@ -1,0 +1,963 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+               "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+lang="en" xml:lang="en">
+<head>
+<title>LPC17xx ARM Cortex M3 Assembly Language Example</title>
+<meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1"/>
+<meta name="generator" content="Org-mode"/>
+<meta name="generated" content="2011-02-17 Thu"/>
+<meta name="author" content="Frank Sergeant"/>
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  html { font-family: Times, serif; font-size: 12pt; }
+  .title  { text-align: center; }
+  .todo   { color: red; }
+  .done   { color: green; }
+  .tag    { background-color:lightblue; font-weight:normal }
+  .target { }
+  .timestamp { color: grey }
+  .timestamp-kwd { color: CadetBlue }
+  p.verse { margin-left: 3% }
+  pre {
+	border: 1pt solid #AEBDCC;
+	background-color: #F3F5F7;
+	padding: 5pt;
+	font-family: courier, monospace;
+        font-size: 90%;
+        overflow:auto;
+  }
+  table { border-collapse: collapse; }
+  td, th { vertical-align: top; }
+  dt { font-weight: bold; }
+  div.figure { padding: 0.5em; }
+  div.figure p { text-align: center; }
+  .linenr { font-size:smaller }
+  .code-highlighted {background-color:#ffff00;}
+  .org-info-js_info-navigation { border-style:none; }
+  #org-info-js_console-label { font-size:10px; font-weight:bold;
+                               white-space:nowrap; }
+  .org-info-js_search-highlight {background-color:#ffff00; color:#000000;
+                                 font-weight:bold; }
+  /*]]>*/-->
+</style>
+<script type="text/javascript">
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*/-->
+</script>
+</head><body>
+<h1 class="title">LPC17xx ARM Cortex M3 Assembly Language Example</h1>
+
+
+
+
+
+
+
+
+
+
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#sec-1">1 Abstract </a></li>
+<li><a href="#sec-2">2 The hardware </a>
+<ul>
+<li><a href="#sec-2.1">2.1 Add Headers </a></li>
+<li><a href="#sec-2.2">2.2 Serial port </a></li>
+</ul>
+</li>
+<li><a href="#sec-3">3 The software tools </a>
+<ul>
+<li><a href="#sec-3.1">3.1 The assembler and linker </a></li>
+<li><a href="#sec-3.2">3.2 The preprocessor </a></li>
+</ul>
+</li>
+<li><a href="#sec-4">4 The assembly language program </a>
+<ul>
+<li><a href="#sec-4.1">4.1 Source code listing </a></li>
+<li><a href="#sec-4.2">4.2 Notes about the source code </a></li>
+</ul>
+</li>
+<li><a href="#sec-5">5 Assembling and linking </a></li>
+<li><a href="#sec-6">6 Burning the flash with a JTAG connector </a></li>
+<li><a href="#sec-7">7 Burning the flash through the serial bootloader </a></li>
+<li><a href="#sec-8">8 Other files </a>
+<ul>
+<li><a href="#sec-8.1">8.1 The link file </a></li>
+<li><a href="#sec-8.2">8.2 The OpenOCD configuration file </a></li>
+<li><a href="#sec-8.3">8.3 Bonus section </a></li>
+</ul>
+</li>
+<li><a href="#sec-9">9 Download </a></li>
+<li><a href="#sec-10">10 Dead ends </a>
+<ul>
+<li><a href="#sec-10.1">10.1 Using Code Red to program the flash </a></li>
+<li><a href="#sec-10.2">10.2 Using an Olimex JTAG probe with OpenOCD </a></li>
+<li><a href="#sec-10.3">10.3 Verify error with lpc21isp version 1.79 </a></li>
+</ul>
+</li>
+<li><a href="#sec-11">11 Conclusion </a></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-1" class="outline-2">
+<h2 id="sec-1">1 Abstract </h2>
+<div id="text-1">
+
+
+<p>
+This note describes an LED blinking program written in assembly
+language for the LPC17xx family of ARM Cortex M3 chips.  As written,
+it runs on the LPCXpresso LPC1769 board (where the LED is on Port 0,
+bit 22).  To run on other LPC17xx boards where an LED is on a
+different port pin, either adjust this code to use a different port
+pin or else use a logic probe on Port 0, bit 22, as a temporary LED,
+and run the program as-is.
+</p>
+<p>
+It shows the commands for assembling and linking with the GNU
+assembler and linker and also the commands for burning the program
+into the board's flash memory via a JTAG connector and the OpenOCD
+software or with the lpc21isp serial bootloader (flash) utility.
+</p>
+<p>
+The binary file is also included in case you would like to jump right
+to burning it into flash.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-2" class="outline-2">
+<h2 id="sec-2">2 The hardware </h2>
+<div id="text-2">
+
+
+<p>
+I used the LPCXpresso LPC1769 board.  I do not recommend the
+LPCXpresso boards and suggest you get a different LPC17xx board
+instead.
+</p>
+<p>
+On the LPCXpresso board, an LED is connected to bit 22 of Port 0.
+This is labeled "LED2".  It is near J6-36.  When Port 0 bit 22 is
+high, the LED lights up.
+</p>
+<p>
+Below, I describe some hardware modifications (basically soldering
+some headers for easy access and adding a serial adapter) .  You may
+not need to do even this much if
+</p>
+<ul>
+<li>
+you use an LPCXpresso board but can burn the flash successfully
+from the Code Red IDE
+
+</li>
+<li>
+you use an LPCXpresso board in some sort of a base board that
+supplies a serial adapter and/or a JTAG connector
+
+</li>
+<li>
+you use a different LPC17xx board with a JTAG adapter or a serial
+port adapter
+
+</li>
+</ul>
+
+</div>
+
+<div id="outline-container-2.1" class="outline-3">
+<h3 id="sec-2.1">2.1 Add Headers </h3>
+<div id="text-2.1">
+
+
+<p>
+I cut the traces on the bottom of the board between the LPC-Link part
+of the board and the LPC1769 part of the board.  Then, I soldered a
+16-pin header (2x8, double row, 8 pins in each row) and shorted pins 1
+and 2 together (3.3V) and shorted pins 15 and 16 together (ground)
+(or, just don't cut those two traces).  Pins 1, 2, 15, and 16 provide
+a convenient place to pick up power and ground for the serial adapter.
+This header is labeled J4 on the board.
+</p>
+<p>
+I also soldered a single-row 27-pin header on each edge of the LPC1769
+side of the board to give easy access to the serial port pins and
+other pins.  This header is labeled J6 on the board.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-2.2" class="outline-3">
+<h3 id="sec-2.2">2.2 Serial port </h3>
+<div id="text-2.2">
+
+
+<p>
+In order to use the chip's built-in serial bootloader, I wired a
+serial adapter to UART0 so I could program the flash with the lpc21isp
+flash utility.  You can get such an adapter from SparkFun
+(<a href="http://www.sparkfun.com/">http://www.sparkfun.com/</a>).  I built my own with two gates of a 4049
+chip (a real 4049, not a 74HC4049, because we need it to run at 3.3
+volts) and some resistors.
+</p>
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-3" class="outline-2">
+<h2 id="sec-3">3 The software tools </h2>
+<div id="text-3">
+
+
+<p>
+I did not use the Code Red IDE.  I tried it briefly but I did not get
+along well with it.  Because of this, I cannot recommend the
+LPCXpresso boards.
+</p>
+<p>
+The software described here, needed to preprocess, assemble, link, and
+burn the demo program into the ARM Cortex board, runs on Linux.  If
+you do not have Linux available, it can be as simple as temporarily
+booting an Ubuntu live CD (see details at
+<a href="http://pygmy.utoh.org/riscy/">http://pygmy.utoh.org/riscy/</a>) and installing the "Bundle of Tools".
+</p>
+
+</div>
+
+<div id="outline-container-3.1" class="outline-3">
+<h3 id="sec-3.1">3.1 The assembler and linker </h3>
+<div id="text-3.1">
+
+
+<p>
+We use (parts of) the GNU toolchain, running on Linux (such as Ubuntu
+10.04).  In particular we need the GNU "binutils" package, which
+includes the ARM assembler and linker and some utilities to manipulate
+the output files.  We do not need the C or C++ compiler.
+</p>
+<p>
+This is a <b>cross assembler</b>.  It runs on a PC (such as a typical
+desktop or laptop with an Intel CPU) but produces code for an ARM CPU.
+</p>
+<p>
+If you don't have GNU binutils for the ARM installed, you can download
+my "Bundle of Tools" at <a href="http://pygmy.utoh.org/riscy/">http://pygmy.utoh.org/riscy/</a>.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-3.2" class="outline-3">
+<h3 id="sec-3.2">3.2 The preprocessor </h3>
+<div id="text-3.2">
+
+
+<p>
+The GNU ARM assembler prefers to use the at-sign for comments.  I
+prefer to use the semicolon for comments.  So, I write the assembly
+language program using semicolons for comments then run the program
+through a preprocessor that converts semicolons to at-signs before
+feeding the program to the ARM assembler.
+</p>
+<p>
+The preprocessor program is named <code>preasm.tcl</code> and is included in the
+tools bundle mentioned in the previous section.  If you prefer, you
+can manually convert the semicolons to at-signs.
+</p>
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-4" class="outline-2">
+<h2 id="sec-4">4 The assembly language program </h2>
+<div id="text-4">
+
+
+
+</div>
+
+<div id="outline-container-4.1" class="outline-3">
+<h3 id="sec-4.1">4.1 Source code listing </h3>
+<div id="text-4.1">
+
+
+<p>
+Here is the program source code (from the file named <code>led-lpc17xx.asm</code>).
+</p>
+<pre class="example">
+;;; led-lpc17xx.asm
+;;; written by Frank Sergeant
+;;;    frank@pygmy.utoh.org
+;;;    http://pygmy.utoh.org/riscy
+;;; This program is in the public domain.  See http://pygmy.utoh.org/riscy/cortex/
+;;; for notes about the program and how to assemble, link, and burn to flash.
+
+;;; Blink the LED on the LPCXpresso LPC1769 ARM Cortex M3 board
+;;; (or any LPC17xx ARM board with perhaps minor modifications).
+
+;;; The LED on the Xpresso board is labeled LED2 and is just to the
+;;; left of (inside of) J6-36.  It is connected to P0.22. The LED is
+;;; on when P0.22 is high.
+        
+;;; Directives
+        .thumb                  ; (same as saying '.code 16')
+        .syntax unified
+
+;;; Equates
+
+        .equ LED_MASK, 0x00400000 ; i.e., bit 22
+        
+        .equ PINSEL0,  0x4002C000
+        .equ PINSEL1,  0x4002C004
+
+        .equ FIO0DIR,      0x2009C000 ; port direction, 0 (default) = input
+        .equ FIO0MASK,     0x2009C010 ; port direction, 0 (default) = input
+        .equ FIO0PIN,      0x2009C014
+        .equ FIO0SET,      0x2009C018
+        .equ FIO0CLR,      0x2009C01C
+        
+        .equ STACKINIT,   0x10004000
+
+        ;.equ LEDDELAY,    800000
+        .equ LEDDELAY,    300000
+
+.section .text
+        .org 0
+
+;;; Vectors
+vectors:
+        .word STACKINIT         ; stack pointer value when stack is empty
+        .word _start + 1        ; reset vector (manually adjust to odd for thumb)
+        .word _nmi_handler + 1  ;
+        .word _hard_fault  + 1  ;
+        .word _memory_fault + 1 ;
+        .word _bus_fault + 1    ;
+        .word _usage_fault + 1  ;
+
+_start:
+
+        ldr r6, = PINSEL1
+        ;; set P0.22 as a GPIO pin
+        ;; P0.22 is controlled by bits 13:12 of PINSEL1
+        ;; xxxx xxxx xxxx xxxx xx11 xxxx xxxx xxxx
+        ;;    0    0    0    0    3    0    0    0
+
+        ldr r0, [r6]
+        bic r0, r0, # 0x00003000  ; clear bits 13:12 to force GPIO mode
+        str r0, [r6]
+
+
+        ;; set LED output pin (i.e. P0.22) as an output
+        ldr r6, = FIO0DIR             ; for PORT0
+        mov r0, # LED_MASK            ;  all inputs except for pin 22
+        str r0, [r6]
+        
+        ;; r0 still contains LED_MASK 
+        ldr r5, = FIO0CLR
+        ldr r6, = FIO0SET
+
+loop:
+        str r0, [r5]            ; clear P0.22, turning off LED
+        ldr r1, = LEDDELAY
+delay1:
+        subs r1, 1
+        bne delay1
+
+        str r0, [r6]            ; set P0.22, turning on LED
+        ldr r1, = LEDDELAY
+delay2:
+        subs r1, 1
+        bne delay2
+
+        b loop                 ; continue forever
+
+_dummy:                        ; if any int gets triggered, just hang in a loop
+_nmi_handler:
+_hard_fault:
+_memory_fault:
+_bus_fault:
+_usage_fault:
+        add r0, 1
+        add r1, 1
+        b _dummy
+</pre>
+
+</div>
+
+</div>
+
+<div id="outline-container-4.2" class="outline-3">
+<h3 id="sec-4.2">4.2 Notes about the source code </h3>
+<div id="text-4.2">
+
+
+<p>
+The goal for this program (other than blinking the LED) is to start
+with a <b>very simple</b> program.  This lets us check out our toolchain,
+our flash utility and/or JTAG connector and software, and our mental
+model of how it all works without getting bogged down in unnecessary
+complexities.  For example, we do not use subroutines.  We only set up
+the hardware stack because the ARM Cortex loads the stack pointer
+automatically.  We hard-code the output port configuration register
+(rather than setting just the bits we need for the LED pin).  We do
+not alter the clock source or speed (we use the default internal 4 MHz
+clock).  We just want something to run <b>now</b> !
+</p>
+<p>
+The LPC1769 MCU uses the "Thumb-2" instruction set, not the "ARM"
+instruction set.  Even though the <code>.thumb</code> directive is equivalent to
+the <code>.code 16</code> directive, the processor is still a 32-bit processor.
+</p>
+<p>
+We define some symbolic constants, including the initial stack value
+(<code>STACKINIT</code>) and the LED delay value (<code>LEDDELAY</code>).  If, after getting
+the program to run, you would prefer to make the LED blink faster or
+slower, then change the value of <code>LEDDELAY</code>.
+</p>
+<p>
+The program starts at address zero (0x0000 0000) with the vector
+table.  Each vector table slot is 4 bytes long.  The first entry is
+the initial value for the stack pointer.  We use 0x1000 4000 for the
+initial stack value.
+</p>
+<p>
+The second slot in the vector table holds the address where program
+execution will begin.  In this case, it is at the label <code>_start</code>.
+Actually, we adjust the address slightly in the vector table by adding
+1 to it to make it odd.  This is required because, in Thumb mode, a
+value loaded into the program counter must have its least significant
+bit set.  I suppose there is a way to avoid doing this by putting the
+vectors is a special section and giving the linker certain command
+options and/or using an assembler directive. 
+</p>
+<p>
+We fill in several more slots in the vector table for various
+exceptions.  They all point to a loop at the end of the program.  We
+do not expect any of these exceptions to be triggered, but if they
+are, the program will just hang in a loop, incrementing two registers
+(so we will have something to look at if we are tracing the program in
+a debugger).
+</p>
+<p>
+The rest of the logic should be straightforward.  We alternately write
+a "1" bit to the FIOCLR and the FIOSET registers to turn bit 22 of
+Port 0 on and off (to turn the LED off and on), killing time so the
+LED flashes at exactly the speed we like best (adjust <code>LEDDELAY</code> to
+your personal taste).
+</p>
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-5" class="outline-2">
+<h2 id="sec-5">5 Assembling and linking </h2>
+<div id="text-5">
+
+
+<p>
+Assuming you have the assembler and linker and other tools installed
+where I install them, here are the commands to preprocess, assemble,
+link, and build a binary:
+</p>
+<pre class="example">
+$ /usr/local/bin/preasm.tcl led-lpc17xx.asm led-lpc17xx.s 
+$ /usr/local/arm/bin/arm-elf-as -mcpu=cortex-m3 -mthumb -mapcs-32 -gstabs -ahls=led-lpc17xx.lst -o led-lpc17xx.o led-lpc17xx.s
+$ /usr/local/arm/bin/arm-elf-ld -v -T lpc17xx.ld -nostartfiles -o led-lpc17xx.elf led-lpc17xx.o
+$ /usr/local/arm/bin/arm-elf-objcopy -O binary led-lpc17xx.elf  led-lpc17xx.bin
+</pre>
+
+<p>
+The goal is to produce the file <code>led-lpc17xx.bin</code> to burn into the
+MCU's flash memory.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-6" class="outline-2">
+<h2 id="sec-6">6 Burning the flash with a JTAG connector </h2>
+<div id="text-6">
+
+
+<p>
+(I used the serial bootloader instead.  See the next section.)
+</p>
+<p>
+You can use any method you prefer to burn <code>led-lpc17xx.bin</code> into the
+flash.  Here is how I might do it if I had a working JTAG connection
+to the LPCXpresso board, using OpenOCD and the Olimex ARM USB Tiny
+JTAG adaptor (<a href="http://olimex.com/dev/arm-usb-tiny.html">http://olimex.com/dev/arm-usb-tiny.html</a>):
+</p>
+<ul>
+<li>
+Open a terminal and start the OpenOCD daemon with
+<pre class="example">
+$ openocd -f openocdlpc17xx.cfg
+</pre>
+
+</li>
+<li>
+In another terminal, connect to the daemon with
+<pre class="example">
+$ telnet localhost 4444
+</pre>
+
+</li>
+<li>
+Then in the telnet terminal, type the following commands (not all
+are necessary)
+
+<pre class="example">
+&gt; help
+  run above to see all OpenOCD commands
+&gt; halt
+&gt; poll
+&gt; flash erase_sector 0 0 0
+  erase sector 0 (where we will load our new program)
+&gt; flash info 0
+&gt; flash erase_check 0 
+  hopefully this shows we erased sector 0 successfully
+&gt; flash write_bank 0 led-lpc17xx.bin 0 
+&gt; mdw 0 7               
+  above displays the 7 vector slots as 32-bit words, note all slots except
+  the first have the least significant bit set
+&gt; mdb 0 28
+  above displays the 7 vector slots as 28 bytes (note, little endian)
+&gt; cortex_m3 disassemble 0x1c  0x20
+  above disassembles the program starting at the label "_start"
+&gt; reset init
+&gt; resume
+</pre>
+
+</li>
+</ul>
+</div>
+
+</div>
+
+<div id="outline-container-7" class="outline-2">
+<h2 id="sec-7">7 Burning the flash through the serial bootloader </h2>
+<div id="text-7">
+
+
+<p>
+I used a serial connection on the PC (on <code>/dev/ttyS1</code> in my case),
+along with the lpc21isp flash utility, to program the flash with this
+command: 
+</p>
+<pre class="example">
+lpc21isp  -donotstart -verify -bin led-lpc17xx.bin  /dev/ttyS1 38400 4000
+</pre>
+
+<p>
+I used a serial adapter to convert the LPC1769 chip's UART0 TTL-level
+signals to RS232-level signals (or close enough).  I made the adapter
+with a 4049 hex inverter chip, using one gate for Rx and one gate for
+Tx with a resistor on the inputs to provide a little current-limiting
+protection.  I picked up power and ground from J4-2 and J4-16.  I
+picked up Tx and Rx from J6-22 and J6-21.
+</p>
+<p>
+I also set up two jumper wires:
+</p>
+<ul>
+<li>
+one on J6-4 (nRESET)
+
+<p>
+The chip can be reset by briefly touching the other end of this
+jumper to J6-1 (ground), eliminating the need to unplug and replug
+the USB connector in order to reset the board
+</p>
+</li>
+<li>
+one on J6-51 (Port 2, bit 10)
+
+<p>
+If this pin is low when the chip comes out of reset, the chip goes
+into serial bootloader mode.
+</p>
+</li>
+</ul>
+
+<p>The sequence to program the flash is this
+</p>
+<ul>
+<li>
+jump J6-51 (bootloader) to J6-54 (ground)
+
+</li>
+<li>
+type in the lpc21isp command 
+
+</li>
+<li>
+briefly touch the jumper from J6-4 (nRESET) to J6-1 (ground) to
+reset the chip
+
+</li>
+<li>
+see that lpc21isp runs successfully (do we need to ignore the
+verify failure message?  See the "Dead end" section below.)
+
+</li>
+<li>
+remove the jumper from J6-51
+
+</li>
+<li>
+again briefly touch the jumper from J6-4 to J6-1 to reboot the chip
+in non-bootloader mode
+
+</li>
+<li>
+watch the LED blink
+
+
+</li>
+</ul>
+</div>
+
+</div>
+
+<div id="outline-container-8" class="outline-2">
+<h2 id="sec-8">8 Other files </h2>
+<div id="text-8">
+
+
+<p>
+You need several other files, whose contents are listed below.  See
+the next section for the download bundle.
+</p>
+
+</div>
+
+<div id="outline-container-8.1" class="outline-3">
+<h3 id="sec-8.1">8.1 The link file </h3>
+<div id="text-8.1">
+
+
+<p>
+lpc17xx.ld
+</p>
+<pre class="example">
+/* Simple linker script for the NXP LPC1769 ARM Cortex M3.  Link the text
+   of the program into on-board flash and use on-board RAM for data and stack.
+*/
+
+SECTIONS
+{
+        /* interrupt vectors start at zero */
+        . = 0x0;  /* start of flash */
+
+        .text :  {  *(.text)   }
+
+        /* constant data follows code but still in flash */
+        .data :
+        {
+          *(.data)
+          *(.rom)
+        }
+
+        /* internal RAM starts at 0x10000000 */
+        . = 0x10000000;
+        .ram : { *(.ram) }
+
+        .bss :
+        {
+          *(.bss)
+          *(.ram)
+        }
+}
+</pre>
+
+</div>
+
+</div>
+
+<div id="outline-container-8.2" class="outline-3">
+<h3 id="sec-8.2">8.2 The OpenOCD configuration file </h3>
+<div id="text-8.2">
+
+
+<p>
+openocdlpc17xx.cfg
+</p>
+<pre class="example">
+# This file is for use with the LPCXpresso LPC1769 board.
+# It is named openocdlpc17xx.cfg.  Run it this way:
+#    $ openocd -f openocdlpc17xx.cfg
+
+# This is the JTAG connector I use
+source [find interface/olimex-jtag-tiny.cfg]
+
+# This is close enough to the board I use
+source [find target/lpc1768.cfg]
+
+# tell gdb our flash memory map and enable flash programming
+gdb_memory_map enable
+gdb_flash_program enable
+
+# Note, on the JTAG interface I wired up to the LPCXpresso board, the
+# nTRST is not available.  Do we need to tell OpenOCD about that?
+
+# I don't know whether the following would help or not
+#reset_config srst_only
+</pre>
+
+</div>
+
+</div>
+
+<div id="outline-container-8.3" class="outline-3">
+<h3 id="sec-8.3">8.3 Bonus section </h3>
+<div id="text-8.3">
+
+
+<p>
+This note does not go into the details of using the GNU
+debugger (GDB) with this board and JTAG.  If you manage to get a
+working JTAG/OpenOCD connection to your board, see the "Bonus section"
+of <a href="http://pygmy.utoh.org/riscy/cortex/led-stm32.html">http://pygmy.utoh.org/riscy/cortex/led-stm32.html</a> for some hints
+about setting up the GDB configuration files.
+</p>
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-9" class="outline-2">
+<h2 id="sec-9">9 Download </h2>
+<div id="text-9">
+
+
+<p>
+The file <a href="http://pygmy.utoh.org/riscy/cortex/led-lpc17xx.zip">http://pygmy.utoh.org/riscy/cortex/led-lpc17xx.zip</a> contains
+</p>
+<dl>
+<dt>led-lpc17xx.html</dt><dd>
+this file
+
+</dd>
+<dt>openocdlpc17xx.cfg</dt><dd>
+the JTAG/OpenOCD configuration file
+
+</dd>
+<dt>lpc17xx.ld</dt><dd>
+the linker file
+
+</dd>
+<dt>led-lpc17xx.asm</dt><dd>
+the LED blinking program source code
+
+</dd>
+<dt>led-lpc17xx.s</dt><dd>
+the preprocessed LED blinking program source code
+
+</dd>
+<dt>led-lpc17xx.lst</dt><dd>
+the listing file produced by the assembler
+
+</dd>
+<dt>led-lpc17xx.bin</dt><dd>
+the binary ready to burn into the MCU's flash
+
+</dd>
+</dl>
+
+<p>Also, the GNU binutils compiled on 32-bit Ubuntu 10.04 to cross
+assemble for the ARM (and ARM Cortex) along with the preprocessor are
+available at <a href="http://pygmy.utoh.org/riscy/">http://pygmy.utoh.org/riscy/</a> &ndash; look for "The Bundle of
+Tools".
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-10" class="outline-2">
+<h2 id="sec-10">10 Dead ends </h2>
+<div id="text-10">
+
+
+
+</div>
+
+<div id="outline-container-10.1" class="outline-3">
+<h3 id="sec-10.1">10.1 Using Code Red to program the flash </h3>
+<div id="text-10.1">
+
+
+<p>
+Although I found the "Program Flash" tool bar button, and could make
+it apparently go through the steps to burn led-lpc17xx.bin, it didn't
+seem to work.  (Of course, if you try this after you cut the traces
+between the LPC-Link side and the LPC1769 side, you need to jumper
+them again.  For example, solder a 2x8 header into J4 then use
+shorting blocks on all 8 pairs).
+</p>
+<p>
+If you should get this working, and especially if you are then able to
+tell Code Red that led-lpc17xx.s is the source code file, and are then
+able to step through it in the Code Red debugger, please email me with
+full details as to how you did it.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-10.2" class="outline-3">
+<h3 id="sec-10.2">10.2 Using an Olimex JTAG probe with OpenOCD </h3>
+<div id="text-10.2">
+
+
+<p>
+After cutting the traces and installing the 2x8 header for J4, and
+soldering in the 2x27 header (well, two separate 1x17 headers) for J6,
+I wired up an adapter to the board for my Olimex USB-TINY JTAG adapter
+and tried working with it with OpenOCD.
+</p>
+<p>
+I did succeed in dumping memory, but attempting to program the flash
+and/or to single step failed.
+</p>
+<p>
+Here is how I wired my connector, showing where I picked up the JTAG
+signals.  
+</p>
+<pre class="example">
+                                         JTAG
+                                       Top View
+                          .--------------------------------.
+                          |                                |
+          (LPC J4-2) 3.3v | 1 Vref               Vtarget 2 | 3.3v
+                          |                                |
+                     n/c  | 3 NTRST                 GND  4 |
+                          |                                |
+              (LPC J4-10) | 5 TDI                   GND  6 |
+                          |                                |
+               (LPC J4-4) | 7 TMS                   GND  8 |
+                          |                                |
+               (LPC J4-6) | 9 TCK                   GND 10 |
+                          |                                |
+                     n/c  |11 RTCK                  GND 12 | 
+                          |                                |
+               (LPC J4-8) |13 TDO                   GND 14 | 
+                          |                                |
+              (LPC J4-12) |15 RST                   GND 16 | 
+                          |                                |
+                     n/c  |17 DBGRQ                 GND 18 | 
+                          |                                |
+                     n/c  |19 DBGACK                GND 20 | GND (LPC J4-16)
+                          |                                |
+                          `--------------------------------'
+</pre>
+
+<p>
+I didn't bother with any pull-ups or pull-downs, assuming the signals
+that needed that were already pulled up or down on the LPCXpresso
+board itself.  That I was able to communicate through this adapter
+(the mdw command to dump memory) seems to support this assumption.
+</p>
+<p>
+I understand the RTCK signal is not needed.  I really wanted to
+connect the NTRST signal, which apparently comes from the LPC1769
+chip's pin 100, but I could not find where the LPCXpresso board
+brought that signal out to any connector and I did not want to try
+soldering to the tiny pins of the LPC1769 chip.
+</p>
+<p>
+If you find that NTRST/pin 100 is in fact accessible somewhere on the
+board, please tell me where.
+</p>
+<p>
+If you are able to get "real" JTAG (as opposed to the proprietary Code
+Red version) working with this board, please tell me how you did it.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-10.3" class="outline-3">
+<h3 id="sec-10.3">10.3 Verify error with lpc21isp version 1.79 </h3>
+<div id="text-10.3">
+
+
+<p>
+This is not necessarily a dead end.  I did successfully program the
+flash so that the LED blinking program would run.  I used this command
+</p>
+<pre class="example">
+lpc21isp  -donotstart -verify -bin led-lpc17xx.bin  /dev/ttyS1 38400 4000
+</pre>
+
+<p>
+and it reported a verification failure.  What I would like to know is
+whether the my particular LPC1769 chip does indeed have some bad flash
+(but not in places that would prevent the LED blinking program from
+running) or if the lpc21isp program (version 1.79) is failing to
+verify flash that in fact is programmed successfully.
+</p>
+<p>
+An obvious experiment, which I have not tried yet, is to slow down the
+baudrate, using somethink like
+</p>
+<pre class="example">
+lpc21isp  -donotstart -verify -bin led-lpc17xx.bin  /dev/ttyS1 1200 4000
+</pre>
+
+<p>
+So, if you use lpc21isp to program the flash in an LPCXpresso board,
+please email me to tell me how it worked for you.
+</p>
+
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-11" class="outline-2">
+<h2 id="sec-11">11 Conclusion </h2>
+<div id="text-11">
+
+
+<p>
+Please email me with any comments or corrections or questions (or
+answers).
+</p>
+</div>
+</div>
+<div id="postamble"><p class="author"> Author: Frank Sergeant
+<a href="mailto:frank@pygmy.utoh.org">&lt;frank@pygmy.utoh.org&gt;</a>
+</p>
+<p class="date"> Date: 2011-02-17 Thu</p>
+<p>HTML generated by org-mode 6.21b in emacs 23</p>
+</div></body>
+</html>

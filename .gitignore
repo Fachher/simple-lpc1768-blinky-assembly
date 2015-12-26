@@ -1,0 +1,9 @@
+*.s
+*.bin
+*.elf
+*.dictionary
+*.lnkh
+*.lst
+*.o
+*.lnkt
+*.hex
