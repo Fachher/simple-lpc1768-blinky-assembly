@@ -11,6 +11,7 @@
 # Set especially these variables for your environment
 # ######################################################################
 
+FLASHER = /Applications/SEGGER/JLink/JLinkExe
 BIN = /Users/fachhersyed/Programs/arm-cs-tools/bin
 PREASM = ./preasm.tcl
 
@@ -50,3 +51,6 @@ clean:
 	$(BIN)/arm-none-eabi-objdump -h $@ > $*.lnkh
 	$(BIN)/arm-none-eabi-objdump -t $@ > $*.lnkt
 
+flash:
+	@ echo "Flashing board"
+	$(FLASHER) -CommanderScript flashlpc1768.jlink

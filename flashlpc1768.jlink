@@ -1,0 +1,5 @@
+r
+h
+exec device = LPC1768
+loadbin led-lpc17xx.bin , 0
+
