@@ -53,4 +53,4 @@ clean:
 
 flash:
 	@ echo "Flashing board"
-	$(FLASHER) -CommanderScript flashlpc1768.jlink
+	$(FLASHER) -device LPC1768 -If SWD -CommanderScript flashlpc1768.jlink

@@ -1,12 +1,5 @@
-power on
-si 1
 speed 400
-device LPC1768
-exec device = LPC1768
 r
 h
-erase
-loadbin /tmp/led.bin , 0
-r
-g
-qc
+loadbin led-lpc17xx.bin , 0
+
